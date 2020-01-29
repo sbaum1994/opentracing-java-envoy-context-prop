@@ -1,7 +1,11 @@
 package hello;
 
+import com.lightstep.tracer.shared.EnvoyPropagator;
 import com.lightstep.tracer.shared.Options;
+import com.lightstep.tracer.shared.Propagator;
+import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
+import io.opentracing.propagation.Format;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -15,7 +19,7 @@ public class Application {
 	final org.slf4j.Logger log = LoggerFactory.getLogger(Application.class);
 
 	@Bean
-	public io.opentracing.Tracer lightstepTracer() {
+	public Tracer tracer() {
 		log.info("Configuring Lightstep tracer.");
 		Map<String, String> env = System.getenv();
 
@@ -24,6 +28,11 @@ public class Application {
 			String satelliteHost = env.get("LIGHTSTEP_HOST");
 			Integer satellitePort = Integer.parseInt(env.get("LIGHTSTEP_PORT"));
 			String satelliteProtocol = env.get("LIGHTSTEP_PROTOCOL");
+
+//			PropagatorStack propStack = new PropagatorStack(Format.Builtin.HTTP_HEADERS);
+//			Propagator envoyPropagator = new EnvoyPropagator();
+//			propStack.pushPropagator(envoyPropagator);
+
 
 			Options opts = new Options.OptionsBuilder()
 					.withComponentName("spring-app")

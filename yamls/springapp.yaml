@@ -1,0 +1,88 @@
+# For running the service in local development in minikube and istio (hence the nodePort and local registry)
+# Get the address of the service:
+# export INGRESS_HOST=$(minikube ip)
+# export INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].nodePort}')
+# curl http://$INGRESS_HOST:$INGRESS_PORT
+# should get Hello Docker World
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: spring-app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-app
+  labels:
+    app: spring-app
+spec:
+  ports:
+  - name: http
+    port: 8000 # port the service is being exposed on to istio gateway
+    targetPort: 8080 # port on container
+  selector:
+    app: spring-app
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: spring-app-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80 # port that is being exposed to the outside world (your local minikube ip)
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: spring-app
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - spring-app-gateway
+  http:
+  - route:
+    - destination:
+        host: spring-app
+        port:
+          number: 8000 # port the service is being exposed on to istio gateway
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-app
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: spring-app
+        version: v1
+    spec:
+      serviceAccountName: spring-app
+      containers:
+      - name: spring-app
+        image: localhost:5000/spring-app-f5c0f47:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080 # port on container
+        env:
+        - name: LIGHTSTEP_ACCESS_TOKEN
+          value: <TOKEN HERE>
+        - name: LIGHTSTEP_HOST
+          value: ingest.lightstep.com
+        - name: LIGHTSTEP_PORT
+          value: "443"
+        - name: LIGHTSTEP_PROTOCOL
+          value: https
